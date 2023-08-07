@@ -2,6 +2,11 @@
 
 # ----
 # script-o-counter - a script to count through 1.0 and 2.x SuiteScript code and compare their relative percentage 
+# 
+# Note: This script calculates the correct values for 2.x code, since it is a lot easier to find 2.x code indiactors that would
+# yield an almost definite match. 1.0 code values would be slightly overestimated due to the fact that some non-SuiteCloud code looks like 1.0 code.
+# This counter also treats regular javascript/typescript as 1.0 code. All of that is due to the lack of consistency in 1.0 code indicators.
+#
 # Author: Seymour Pashayev
 # SeymourP@solution-source.net
 # github: gordonsamh@gmail.com
@@ -9,25 +14,42 @@
 
 
 # Function to check for 2.x code indicators:
-# Use regexp to match 2.x code indicators: [ ____, define?, 'N/_____'] <-- TODO: Clarify what indicators to use.
 # 
-# Arguments: file - file to be parsed for code indicators 
+# Arguments: file - file to be parsed for code indicators. 
 # Return 0 if 2.x code indicators are found, 1 otherwise.
-# TODO:  
 function checkFor2XIndicators() {
-    # Do not go deep here. Only parse the first couple of necessary lines to see if it is 2.x code
-    # If you miss any 2.x code here, it will be found during the deep parse phase.
-    # We are trying to minimize the number of files that we parse here by finding 2.x files right away.
+	# Pass the filename into the function	
+	local filename="$1"
+
+	# Define the pattern(s) to look for
+	# TODO: There's potential to add more 2.x code indicators to the grep search
+	local pattern="@NApiVersion 2.x\|@NApiVersion 2.1\|define(['N/"
+
+	if [ -f "$filename" ]; then
+		# Grep through the file for 2.x code patterns and return 0 if the pattern is found 
+       		if grep -q "$pattern" "$filename"; then
+			return 0;
+		else 
+			return 1;
+		fi
+
+    	else
+        	echo "File not found: $filename"
+		return 1
+    	fi
+
 }
 
 # Function to check for 1.0 code indicators:
-# Use regexp to match 1.0 code indicators: [ ____ ] <-- TODO: Clarify what indicators to use.
 # 
 # Arguments: line - line to be parsed for code indicators 
 # Return 0 if 1.0 code indicators are found, 1 otherwise.
-# TODO:  
 function checkFor1XIndicators() {
     # Use regular expressions to match 1.0 indicators within the line
+    #
+    # !There might be no valid consistent 1.0 code indicators that would work for indentifying a given file
+    # !Therefore any values counting 1.0 code would have to be collected as "fallback" values from code that was
+    # !identified as non-2.x code in the first step of the loop.
 }
 
 # Initialize counters for 1.0 and 2.X lines of code
@@ -44,7 +66,7 @@ for file in *.js; do
     # Check for 2.x indicators in the beginning
     if checkFor2XIndicators "$file"; then
         
-	# Flag as 2.x and skip deep parsing
+	# Flag as 2.x
         echo "$file is 2.x"
 	files_2X+=($file)	
 
@@ -52,22 +74,13 @@ for file in *.js; do
         ((total_lines_2X += $(wc -l < "$file")))	
    
     else
-        
-	# Deep parsing for line count
-        line_count=0
        
-	while IFS= read -r line; do
-            ((line_count++))
-	    # TODO: use a checkFor1XIndicators() function?
-	    
-            # If 2.x indicators are found, flag and break
-        done < "$file"
-        
-	echo "$file is 1.0 with $line_count lines"
+	# Flag as 1.0
+	echo "$file is 1.0"
 	files_1X+=($file)	
 	
 	# Increment 1.0 lines counter
-        ((total_lines_1X += line_count))
+        ((total_lines_1X += $(wc -l < "$file")))		
    
     fi
 done
