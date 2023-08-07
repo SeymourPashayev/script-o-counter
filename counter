@@ -12,7 +12,6 @@
 # github: gordonsamh@gmail.com
 # ----
 
-# TODO: Implement functions as per their description in usage() function.
 # Define usage function to display script usage
 usage() {
 	echo "--------"
@@ -25,6 +24,7 @@ usage() {
 	echo "[-l]: Show line numbers for each code category"
 	echo "[-f]: Show filenames for each code category"
 	echo
+	echo "Either -l or -f is required to run the counter"
 
 	exit 1
 }
@@ -53,7 +53,6 @@ function checkFor2XIndicators() {
         	echo "File not found: $filename"
 		return 1
     	fi
-
 }
 
 # Function to check for 1.0 code indicators:
@@ -68,7 +67,33 @@ function checkFor2XIndicators() {
     # !identified as non-2.x code in the first step of the loop.
 #}
 
-usage
+# Initialize menu flags
+recursive=false
+output_lines=false
+output_files=false
+
+# Process command line options
+while getopts "rlfh" opt; do
+    case $opt in
+        r)
+            recursive=true
+            ;;
+        l)
+            output_lines=true
+            ;;
+        f)
+            output_files=true
+            ;;
+        h|\?)
+            usage
+            ;;
+    esac
+done
+
+# Check if no flags were supplied
+if ! $output_lines && ! $output_files; then
+    usage
+fi
 
 # Initialize counters for 1.0 and 2.X lines of code
 total_lines_1X=0
@@ -78,30 +103,32 @@ total_lines_2X=0
 files_1X=()
 files_2X=()
 
+# TODO: Implement recursive search and the flag for it
 # Iterate through each file
 for file in *.js; do
    
-    # Check for 2.x indicators in the beginning
-    if checkFor2XIndicators "$file"; then
+    	# Check for 2.x indicators in the beginning
+    	if checkFor2XIndicators "$file"; then
         
-	# Flag as 2.x
-        echo "$file is 2.x"
-	files_2X+=($file)	
+		# Flag as 2.x
+        	# echo "$file is 2.x"
+		files_2X+=($file)	
 
-	# Increment 2.x lines counter
-        ((total_lines_2X += $(wc -l < "$file")))	
+		# Increment 2.x lines counter
+        	((total_lines_2X += $(wc -l < "$file")))
+
+		# TODO: Find a way to count lines and ignore comments
    
-    else
+    	elif [ -f $file ]; then
        
-	# Flag as 1.0
-	echo "$file is 1.0"
-	files_1X+=($file)	
+		# Flag as 1.0
+		# echo "$file is 1.0"
+		files_1X+=($file)	
 	
-	# Increment 1.0 lines counter
-        ((total_lines_1X += $(wc -l < "$file")))		
+		# Increment 1.0 lines counter
+        	((total_lines_1X += $(wc -l < "$file")))		
    
-    fi
-
+    	fi
 done
 
 # Output Formatting
@@ -110,19 +137,23 @@ echo
 echo "----- Code Statistics -----"
 echo 
 
-# Print out the number of lines of both 1.0 and 2.x code.
-echo "Total #lines 1.0 code: $total_lines_1X"
-echo "Total #lines 2.x code: $total_lines_2X"
-echo 
+if [ output_lines ]; then
+	# Print out the number of lines of both 1.0 and 2.x code.
+	echo "Total #lines 1.0 code: $total_lines_1X"
+	echo "Total #lines 2.x code: $total_lines_2X"
+	echo 
+fi
 
-# Print out the 1.0 and 2.x file arrays
-echo "1.0 files (${#files_1X[@]} items): "
-printf "  %s\n" "${files_1X[@]}"
-echo
+if [ output_files ]; then
+	# Print out the 1.0 and 2.x file arrays
+	echo "1.0 files (${#files_1X[@]} items): "
+	printf "  %s\n" "${files_1X[@]}"
+	echo
 
-echo "2.0 files (${#files_2X[@]} items): " 
-printf "  %s\n" "${files_2X[@]}"
-echo 
+	echo "2.x files (${#files_2X[@]} items): " 
+	printf "  %s\n" "${files_2X[@]}"
+	echo
+fi
 
 echo "---------------------------"
 
