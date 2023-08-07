@@ -126,9 +126,9 @@ files_2X=()
 
 # Recursive search if the -r flag is set
 if $recursive; then
-	fileList=$(ls -R "$PWD" | grep ".*\.js$")
+	fileList=$(find . -type f -name '*.js')
 else
-	fileList=$(ls "$PWD" | grep ".*\.js$")
+	fileList=$(find . -maxdepth 1 -type f -name '*.js')
 fi
 
 # Iterate through each file
