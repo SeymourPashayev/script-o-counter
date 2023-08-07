@@ -12,6 +12,9 @@
 # github: gordonsamh@gmail.com
 # ----
 
+# TODO: Add a -r flag to make the function recursively look through directories within the directory
+# TODO: Add a -h flag to make a help window on how to use the script
+# TODO: Implement a flag/error system that gets hit before the functions themselves
 
 # Function to check for 2.x code indicators:
 # 
@@ -23,7 +26,7 @@ function checkFor2XIndicators() {
 
 	# Define the pattern(s) to look for
 	# TODO: There's potential to add more 2.x code indicators to the grep search
-	local pattern="@NApiVersion 2.x\|@NApiVersion 2.1\|define(['N/"
+	local pattern="@NApiVersion 2.x\|@NApiVersion 2.1\|define(\['N/\|define(\[\],"
 
 	if [ -f "$filename" ]; then
 		# Grep through the file for 2.x code patterns and return 0 if the pattern is found 
@@ -44,13 +47,13 @@ function checkFor2XIndicators() {
 # 
 # Arguments: line - line to be parsed for code indicators 
 # Return 0 if 1.0 code indicators are found, 1 otherwise.
-function checkFor1XIndicators() {
+#function checkFor1XIndicators() {
     # Use regular expressions to match 1.0 indicators within the line
     #
     # !There might be no valid consistent 1.0 code indicators that would work for indentifying a given file
     # !Therefore any values counting 1.0 code would have to be collected as "fallback" values from code that was
     # !identified as non-2.x code in the first step of the loop.
-}
+#}
 
 # Initialize counters for 1.0 and 2.X lines of code
 total_lines_1X=0
@@ -83,5 +86,29 @@ for file in *.js; do
         ((total_lines_1X += $(wc -l < "$file")))		
    
     fi
+
 done
+
+# Output Formatting
+
+echo
+echo "----- Code Statistics -----"
+echo 
+
+# Print out the number of lines of both 1.0 and 2.x code.
+echo "Total #lines 1.0 code: $total_lines_1X"
+echo "Total #lines 2.x code: $total_lines_2X"
+echo 
+
+# Print out the 1.0 and 2.x file arrays
+echo "1.0 files (${#files_1X[@]} items): "
+printf "  %s\n" "${files_1X[@]}"
+echo
+
+echo "2.0 files (${#files_2X[@]} items): " 
+printf "  %s\n" "${files_2X[@]}"
+echo 
+
+echo "---------------------------"
+
 
