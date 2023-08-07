@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ----
-# script-o-counter - a script to count through 1.0 and 2.x SuiteScript code and compare their relative percentage 
+# script-o-counter - a script to count 1.0 and 2.x SuiteScript files and collect code statistics. 
 # 
 # Note: This script calculates the correct values for 2.x code, since it is a lot easier to find 2.x code indiactors that would
 # yield an almost definite match. 1.0 code values would be slightly overestimated due to the fact that some non-SuiteCloud code looks like 1.0 code.
@@ -12,9 +12,22 @@
 # github: gordonsamh@gmail.com
 # ----
 
-# TODO: Add a -r flag to make the function recursively look through directories within the directory
-# TODO: Add a -h flag to make a help window on how to use the script
-# TODO: Implement a flag/error system that gets hit before the functions themselves
+# TODO: Implement functions as per their description in usage() function.
+# Define usage function to display script usage
+usage() {
+	echo "--------"
+	echo "Script-o-counter - a script to count through 1.0 and 2.x SuiteScript files and collect code statistics." 
+	echo "Run in the directory where you want to collect code statistics."
+	echo "--------"
+	echo "Usage: $0 [-h] [-r] [-l] [-f]"
+	echo "[-h]: Display this menu."
+	echo "[-r]: Apply recursive directory search (look through files in child directories as well)."
+	echo "[-l]: Show line numbers for each code category"
+	echo "[-f]: Show filenames for each code category"
+	echo
+
+	exit 1
+}
 
 # Function to check for 2.x code indicators:
 # 
@@ -54,6 +67,8 @@ function checkFor2XIndicators() {
     # !Therefore any values counting 1.0 code would have to be collected as "fallback" values from code that was
     # !identified as non-2.x code in the first step of the loop.
 #}
+
+usage
 
 # Initialize counters for 1.0 and 2.X lines of code
 total_lines_1X=0
