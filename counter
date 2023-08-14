@@ -33,8 +33,7 @@ function checkFor2XIndicators() {
 	# Pass the filename into the function	
 	local filename="$1"
 
-	# Define the pattern(s) to look for
-	# TODO: There's potential to add more 2.x code indicators to the grep search
+	# Define the 2.x patterns to look for 
 	local pattern="@NApiVersion 2.x\|@NApiVersion 2.1\|define(\['N/\|define(\[\],"
 
 	if [ -f "$filename" ]; then
@@ -63,6 +62,37 @@ function checkFor2XIndicators() {
     # !identified as non-2.x code in the first step of the loop.
 #}
 
+# Function to check if an item is in the array
+# Usage: isDuplicate item array
+isDuplicate() {
+    	local item="$1"
+    	shift
+    	local array=("$@")  # Convert remaining arguments to an array
+
+    	for element in "${array[@]}"; do
+	    	# Get the size of element and item to compare
+		size_item=$(stat -c "%s" "$item")
+		size_arrayElement=$(stat -c "%s" "$element")
+
+	    	if 	[ $(basename "$element") == $(basename "$item") ] &&
+			[ "$size_item" -eq "$size_arrayElement" ];	
+		then
+            		# Item found in the array
+			return 0;	
+        	fi
+    	done
+
+    	# Item not found in the array
+    	return 1 
+}
+
+# Formats file-name output to only print out the file-name w/o the working directory traversal
+# This is done to simplify the output.
+function formatOutput() {
+	local fullFilePath="$1"
+	sed -n -e '/\.js$/s/.*\///p' "$fullFilePath"
+}
+
 # Iterate through each file and process it for 2.x and 1.0 code.
 #
 # Arguments: file - filename of the file to be processed
@@ -74,18 +104,17 @@ processFile() {
     	if checkFor2XIndicators "$file"; then
         
 		# Flag as 2.x
-        	# echo "$file is 2.x"
+        	#echo "$file is 2.x"
+		# TODO: Add duplicateCheck	
 		files_2X+=($file)	
 
 		# Increment 2.x lines counter
         	((total_lines_2X += $(wc -l < "$file")))
 
-		# TODO: Find a way to count lines and ignore comments
-   
-    	elif [ -f $file ]; then
+    	elif [ -f "$file" ]; then
        
 		# Flag as 1.0
-		# echo "$file is 1.0"
+		#echo "$file is 1.0"
 		files_1X+=($file)	
 	
 		# Increment 1.0 lines counter
@@ -97,7 +126,7 @@ processFile() {
 # Initialize menu flags
 recursive=false
 output_lines=true
-output_files=true
+output_files=false
 
 # Process command line options
 while getopts "rh" opt; do
@@ -126,27 +155,20 @@ files_2X=()
 
 # Recursive search if the -r flag is set
 if $recursive; then
-	fileList=$(find . -type f -name '*.js')
+	fileList="find . -type f -name '*.js' -print0"
 else
-	fileList=$(find . -maxdepth 1 -type f -name '*.js')
+	fileList="find . -maxdepth 1 -type f -name '*.js' -print0"
 fi
 
 # Iterate through each file
-while IFS= read -r file; do
+while IFS= read -r -d '' file; do
     processFile "$file"
-done <<< "$fileList"
+done < <(eval "$fileList")
 
 # Output Formatting
 echo
 echo "----- Code Statistics -----"
-echo 
-
-if [ output_lines ]; then
-	# Print out the number of lines of both 1.0 and 2.x code.
-	echo "Total #lines 1.0 code: $total_lines_1X"
-	echo "Total #lines 2.x code: $total_lines_2X"
-	echo 
-fi
+echo
 
 if [ output_files ]; then
 	# Print out the 1.0 and 2.x file arrays
@@ -157,6 +179,13 @@ if [ output_files ]; then
 	echo "2.x files (${#files_2X[@]} items): " 
 	printf "  %s\n" "${files_2X[@]}"
 	echo
+fi
+
+if [ output_lines ]; then
+	# Print out the number of lines of both 1.0 and 2.x code.
+	echo "Total #lines 1.0 code: $total_lines_1X"
+	echo "Total #lines 2.x code: $total_lines_2X"
+	echo 
 fi
 
 echo "---------------------------"
