@@ -69,7 +69,7 @@ populateFileInfo() {
     
    	# Check if the file is already in the array and if the line count is different
     	local -n file_info_array="$array_name"
-    	if [[ -z "${file_info_array[$filename]}" || $line_count -ne "${file_info_array[$filename][line_count]}" ]]; then
+    	if [[ -z "${file_info_array[$filename]}" || $line_count -ne "${file_info_array[$filename]}" ]]; then
         	file_info_array["$filename"]="$line_count"
 
 		# Increment the total line count based on the which code version array belongs to 
@@ -91,11 +91,17 @@ processFile() {
     	# Check for 2.x indicators in the beginning
     	if checkFor2XIndicators "$file"; then
        	
+		#debug
+		echo $file
+
 		# Flag file as 2.X
 		populateFileInfo "files_2X" "$file"
 
     	elif [ -f "$file" ]; then
-       
+      		
+		#debug
+		echo $file
+
 		# Flag file as 1.0
 		populateFileInfo "files_1X" "$file"	
     	fi
