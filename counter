@@ -12,7 +12,9 @@
 # github: gordonsamh@gmail.com
 # ----
 
-# Define usage function to display script usage
+# -------- FUNCTION DEFINITIONS -------- #
+
+# Define "usage" function to display script usage
 usage() {
 	echo "--------"
 	echo "Script-o-counter - a script to count through 1.0 and 2.x SuiteScript files and collect code statistics." 
@@ -50,48 +52,13 @@ function checkFor2XIndicators() {
     	fi
 }
 
-# Function to check for 1.0 code indicators:
-# 
-# Arguments: line - line to be parsed for code indicators 
-# Return 0 if 1.0 code indicators are found, 1 otherwise.
-#function checkFor1XIndicators() {
-    # Use regular expressions to match 1.0 indicators within the line
-    #
-    # !There might be no valid consistent 1.0 code indicators that would work for indentifying a given file
-    # !Therefore any values counting 1.0 code would have to be collected as "fallback" values from code that was
-    # !identified as non-2.x code in the first step of the loop.
-#}
-
-# Function to check if an item is in the array
-# Usage: isDuplicate item array
-isDuplicate() {
-    	local item="$1"
-    	shift
-    	local array=("$@")  # Convert remaining arguments to an array
-
-    	for element in "${array[@]}"; do
-	    	# Get the size of element and item to compare
-		size_item=$(stat -c "%s" "$item")
-		size_arrayElement=$(stat -c "%s" "$element")
-
-	    	if 	[ $(basename "$element") == $(basename "$item") ] &&
-			[ "$size_item" -eq "$size_arrayElement" ];	
-		then
-            		# Item found in the array
-			return 0;	
-        	fi
-    	done
-
-    	# Item not found in the array
-    	return 1 
-}
-
 # Formats file-name output to only print out the file-name w/o the working directory traversal
 # This is done to simplify the output.
-function formatOutput() {
+function cutFileFromPath() {
 	local fullFilePath="$1"
 	sed -n -e '/\.js$/s/.*\///p' "$fullFilePath"
 }
+
 
 # Iterate through each file and process it for 2.x and 1.0 code.
 #
@@ -123,6 +90,8 @@ processFile() {
     	fi
 }
 
+# -------- APPLICATION LOGIC --------
+
 # Initialize menu flags
 recursive=false
 output_lines=true
@@ -130,17 +99,17 @@ output_files=false
 
 # Process command line options
 while getopts "rh" opt; do
-    case $opt in
-        r)
-            	recursive=true
-		;;
-        h|\?)
-            	usage
-            	;;
-    esac
+	case $opt in
+        	r)
+            		recursive=true
+			;;
+        	h|\?)
+            		usage
+            		;;
+    	esac
 done
 
-# Check if no flags were supplied
+# Check if flags were supplied
 if ! $output_lines && ! $output_files; then
     usage
 fi
@@ -150,19 +119,22 @@ total_lines_1X=0
 total_lines_2X=0
 
 # Instantiate arrays to store files of type 1.0 code and 2.x code
+# TODO: Initiate data structures to hold base_filename & (the line count || size)
 files_1X=()
 files_2X=()
 
-# Recursive search if the -r flag is set
+# Define recursive and non-resursive search using find (Recursive if the -r flag is set)
 if $recursive; then
+	# Recursive search	
 	fileList="find . -type f -name '*.js' -print0"
 else
+	# Non-recursive search
 	fileList="find . -maxdepth 1 -type f -name '*.js' -print0"
 fi
 
-# Iterate through each file
+# Iterate through each file found using "find" tool
 while IFS= read -r -d '' file; do
-    processFile "$file"
+    	processFile "$file"
 done < <(eval "$fileList")
 
 # Output Formatting
