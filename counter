@@ -56,9 +56,30 @@ function checkFor2XIndicators() {
 # This is done to simplify the output.
 function cutFileFromPath() {
 	local fullFilePath="$1"
-	sed -n -e '/\.js$/s/.*\///p' "$fullFilePath"
+	echo $sed -n -e '/\.js$/s/.*\///p' "$fullFilePath"
 }
 
+# Function to populate file information
+# Arguments: array_name full_path
+populateFileInfo() {
+    	local array_name="$1"
+    	local full_path="$2"
+	local filename=$(echo "$full_path" | grep -oE '[^/]+$' | sed 's/\./_/g')
+    	local line_count=$(wc -l < "$full_path")
+    
+   	# Check if the file is already in the array and if the line count is different
+    	local -n file_info_array="$array_name"
+    	if [[ -z "${file_info_array[$filename]}" || $line_count -ne "${file_info_array[$filename][line_count]}" ]]; then
+        	file_info_array["$filename"]="$line_count"
+
+		# Increment the total line count based on the which code version array belongs to 
+        	if [[ $array_name == "files_1X" ]]; then
+            		((total_lines_1X += line_count))
+        	elif [[ $array_name == "files_2X" ]]; then
+            		((total_lines_2X += line_count))
+        	fi
+    	fi
+}
 
 # Iterate through each file and process it for 2.x and 1.0 code.
 #
@@ -69,24 +90,14 @@ processFile() {
 
     	# Check for 2.x indicators in the beginning
     	if checkFor2XIndicators "$file"; then
-        
-		# Flag as 2.x
-        	#echo "$file is 2.x"
-		# TODO: Add duplicateCheck	
-		files_2X+=($file)	
-
-		# Increment 2.x lines counter
-        	((total_lines_2X += $(wc -l < "$file")))
+       	
+		# Flag file as 2.X
+		populateFileInfo "files_2X" "$file"
 
     	elif [ -f "$file" ]; then
        
-		# Flag as 1.0
-		#echo "$file is 1.0"
-		files_1X+=($file)	
-	
-		# Increment 1.0 lines counter
-        	((total_lines_1X += $(wc -l < "$file")))		
-   
+		# Flag file as 1.0
+		populateFileInfo "files_1X" "$file"	
     	fi
 }
 
@@ -95,7 +106,7 @@ processFile() {
 # Initialize menu flags
 recursive=false
 output_lines=true
-output_files=false
+output_files=true
 
 # Process command line options
 while getopts "rh" opt; do
@@ -119,9 +130,9 @@ total_lines_1X=0
 total_lines_2X=0
 
 # Instantiate arrays to store files of type 1.0 code and 2.x code
-# TODO: Initiate data structures to hold base_filename & (the line count || size)
-files_1X=()
-files_2X=()
+# Data structure to hold base_filename & the line count
+declare -A files_1X
+declare -A files_2X
 
 # Define recursive and non-resursive search using find (Recursive if the -r flag is set)
 if $recursive; then
@@ -143,21 +154,37 @@ echo "----- Code Statistics -----"
 echo
 
 if [ output_files ]; then
-	# Print out the 1.0 and 2.x file arrays
-	echo "1.0 files (${#files_1X[@]} items): "
-	printf "  %s\n" "${files_1X[@]}"
-	echo
+	
+	# Print file information for 1.x code
+	echo "===================="
+	echo "   1.x Code Files   "
+	echo "===================="
+	for filename in "${!files_1X[@]}"; do
+    		line_count="${files_1X[$filename]}"
+    		echo "$filename: $line_count" 
+   		echo
+	done
 
-	echo "2.x files (${#files_2X[@]} items): " 
-	printf "  %s\n" "${files_2X[@]}"
-	echo
+	# Print file information for 2.x code
+	echo "===================="
+	echo "   2.x Code Files   "
+	echo "===================="
+	for filename in "${!files_2X[@]}"; do
+    		line_count="${files_2X[$filename]}"
+    		echo "$filename: $line_count"
+    		echo
+	done
+
+	echo "---------------------------"
+
 fi
 
 if [ output_lines ]; then
+
 	# Print out the number of lines of both 1.0 and 2.x code.
 	echo "Total #lines 1.0 code: $total_lines_1X"
 	echo "Total #lines 2.x code: $total_lines_2X"
-	echo 
+
 fi
 
 echo "---------------------------"
