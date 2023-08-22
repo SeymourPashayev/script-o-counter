@@ -91,17 +91,11 @@ processFile() {
     	# Check for 2.x indicators in the beginning
     	if checkFor2XIndicators "$file"; then
        	
-		#debug
-		echo $file
-
 		# Flag file as 2.X
 		populateFileInfo "files_2X" "$file"
 
     	elif [ -f "$file" ]; then
       		
-		#debug
-		echo $file
-
 		# Flag file as 1.0
 		populateFileInfo "files_1X" "$file"	
     	fi
