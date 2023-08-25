@@ -153,55 +153,45 @@ while IFS= read -r -d '' file; do
 done < <(eval "$fileList")
 
 # Output Formatting
-echo
-echo "----- Code Statistics -----"
+output="----- Code Statistics -----"
 
-if [ output_lines ]; then
-
-	# Print out the number of lines of both 1.0 and 2.x code.
-	echo "Total #lines 1.0 code: $total_lines_1X"
-	echo "Total #lines 2.x code: $total_lines_2X"
-
+if $output_lines; then
+    output+="\nTotal #lines 1.0 code: $total_lines_1X"
+    output+="\nTotal #lines 2.x code: $total_lines_2X"
+    output+="\n---------------------------\n"
 fi
 
-echo "---------------------------"
+output+="Total #files 1.0 Code: ${#files_1X[@]}"
+output+="\nTotal #files 2.x Code: ${#files_2X[@]}"
+output+="\n---------------------------"
 
-# Print the number of files in 2.x and 1.0 code array
-        echo "Total #files 1.0 Code: ${#files_1X[@]}"
-        echo "Total #files 2.x Code: ${#files_2X[@]}"
+if $output_files; then
+    output+="\n====================\n"
+    output+="   1.x Code Files   \n"
+    output+="====================\n"
+    for filename in "${!files_1X[@]}"; do
+        line_count="${files_1X[$filename]}"
+        output+="$filename: $line_count\n"
+    done
 
-echo "---------------------------"
+    output+="\n====================\n"
+    output+="   2.x Code Files   \n"
+    output+="====================\n"
+    for filename in "${!files_2X[@]}"; do
+        line_count="${files_2X[$filename]}"
+        output+="$filename: $line_count\n"
+    done
 
-if [ output_files ]; then
-	
-	# Print file information for 1.x code
-	echo "===================="
-	echo "   1.x Code Files   "
-	echo "===================="
-	for filename in "${!files_1X[@]}"; do
-    		line_count="${files_1X[$filename]}"
-    		echo "$filename: $line_count" 
-   		echo
-	done
-
-	# Print file information for 2.x code
-	echo "===================="
-	echo "   2.x Code Files   "
-	echo "===================="
-	for filename in "${!files_2X[@]}"; do
-    		line_count="${files_2X[$filename]}"
-    		echo "$filename: $line_count"
-    		echo
-	done
-
-	echo "---------------------------"
-
+    output+="---------------------------"
 fi
 
-# Output to a text file if -t flag is set
-if $output_to_file; then
-        output_file="code_statistics.txt"
-        tee "$output_file"
-        echo "Output written to '$output_file'"
-fi
+# Print to stdout
+echo -e "$output"
 
+output_file=code_statistics.txt
+
+# Save to text file if -t flag is provided
+if [ -n "$output_file" ]; then
+    echo -e "$output" > "$output_file"
+    echo "Output written to '$output_file'"
+fi
