@@ -198,4 +198,10 @@ if [ output_files ]; then
 
 fi
 
+# Output to a text file if -t flag is set
+if $output_to_file; then
+        output_file="code_statistics.txt"
+        tee "$output_file"
+        echo "Output written to '$output_file'"
+fi
 
