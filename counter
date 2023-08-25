@@ -20,9 +20,10 @@ usage() {
 	echo "Script-o-counter - a script to count through 1.0 and 2.x SuiteScript files and collect code statistics." 
 	echo "Run in the directory where you want to collect code statistics."
 	echo "--------"
-	echo "Usage: $0 [-h] [-r]"
+	echo "Usage: $0 [-h] [-r] [-t]"
 	echo "[-h]: Display this menu."
 	echo "[-r]: Apply recursive directory search (look through files in child directories as well)."
+	echo "[-t]: Output to a text file named code_statistics.txt."
 
 	exit 1
 }
