@@ -28,58 +28,84 @@ usage() {
 	exit 1
 }
 
-# Function to check for 2.x code indicators:
-# 
-# Arguments: file - file to be parsed for code indicators. 
-# Return 0 if 2.x code indicators are found, 1 otherwise.
-function checkFor2XIndicators() {
-	# Pass the filename into the function	
-	local filename="$1"
+# Function to display a progress bar
+# Arguments: current_progress total_progress filename
+displayProgressBar() {
+    local current_progress="$1"
+    local total_progress="$2"
 
-	# Define the 2.x patterns to look for 
-	local pattern="@NApiVersion 2.x\|@NApiVersion 2.1\|define(\['N/\|define(\[\],"
+    local width=50  # Width of the progress bar
+    local progress=$((current_progress * width / total_progress))
 
-	if [ -f "$filename" ]; then
-		# Grep through the file for 2.x code patterns and return 0 if the pattern is found 
-       		if grep -q "$pattern" "$filename"; then
-			return 0;
-		else 
-			return 1;
-		fi
+    clear  # Clear the screen
 
-    	else
-        	echo "File not found: $filename"
-		return 1
-    	fi
+    # Set ANSI color codes
+    local green='\033[32m'
+    local reset='\033[0m'
+
+    printf "Progress: [${green}"
+    for ((i=0; i<width; i++)); do
+        if ((i < progress)); then
+            printf "#"
+        else
+            printf " "
+        fi
+    done
+    printf "${reset}] %3d%%${green}%s${reset}\n" $((current_progress * 100 / total_progress))
 }
 
-# Formats file-name output to only print out the file-name w/o the working directory traversal
-# This is done to simplify the output.
-function cutFileFromPath() {
-	local fullFilePath="$1"
-	echo $sed -n -e '/\.js$/s/.*\///p' "$fullFilePath"
+# Function to check for 2.x code indicators:
+#
+# Arguments: file - file to be parsed for code indicators.
+# Return 0 if 2.x code indicators are found, 1 otherwise.
+function checkFor2XIndicators() {
+        # Pass the filename into the function
+        local filename="$1"
+
+        # Define the 2.x patterns to look for
+        local pattern="@NApiVersion 2.x\|@NApiVersion 2.1\|define(\['N/\|define(\[\],"
+
+        if [ -f "$filename" ]; then
+                # Grep through the file for 2.x code patterns and return 0 if the pattern is found
+                if grep -q "$pattern" "$filename"; then
+                        return 0;
+                else
+                        return 1;
+                fi
+
+        else
+                echo "File not found: $filename"
+                return 1
+        fi
 }
 
 # Function to populate file information
 # Arguments: array_name full_path
 populateFileInfo() {
-    	local array_name="$1"
-    	local full_path="$2"
-	local filename=$(echo "$full_path" | grep -oE '[^/]+$' | sed 's/\./_/g')
-    	local line_count=$(wc -l < "$full_path")
-    
-   	# Check if the file is already in the array and if the line count is different
-    	local -n file_info_array="$array_name"
-    	if [[ -z "${file_info_array[$filename]}" || $line_count -ne "${file_info_array[$filename]}" ]]; then
-        	file_info_array["$filename"]="$line_count"
+        local array_name="$1"
+        local full_path="$2"
+        local filename=$(echo "$full_path" | grep -oE '[^/]+$' | sed 's/\./_/g')
+        local line_count=$(wc -l < "$full_path")
 
-		# Increment the total line count based on the which code version array belongs to 
-        	if [[ $array_name == "files_1X" ]]; then
-            		((total_lines_1X += line_count))
-        	elif [[ $array_name == "files_2X" ]]; then
-            		((total_lines_2X += line_count))
-        	fi
-    	fi
+        # Echo which file is being processed
+        printf "\033[32mWorking on: $filename\033[0m\n"
+
+        # Check if the file is already in the array and if the line count is different
+        local -n file_info_array="$array_name"
+        if [[ $line_count -ne "${file_info_array[$filename]}" || -z "${file_info_array[$filename]}" ]]; then
+                file_info_array["$filename"]="$line_count"
+
+                # Increment the total line count based on the which code version array belongs to
+                if [[ $array_name == "files_1X" ]]; then
+                        ((total_lines_1X += line_count))
+                elif [[ $array_name == "files_2X" ]]; then
+                        ((total_lines_2X += line_count))
+                fi
+
+        else
+                # Echo that a duplicate file was found
+                printf "\033[31mDuplicate found: $filename\033[0m\n"
+        fi
 }
 
 # Iterate through each file and process it for 2.x and 1.0 code.
@@ -87,19 +113,19 @@ populateFileInfo() {
 # Arguments: file - filename of the file to be processed
 # Return: void
 processFile() {
-	local file="$1"
+        local file="$1"
 
-    	# Check for 2.x indicators in the beginning
-    	if checkFor2XIndicators "$file"; then
-       	
-		# Flag file as 2.X
-		populateFileInfo "files_2X" "$file"
+        # Check for 2.x indicators in the beginning
+        if checkFor2XIndicators "$file"; then
 
-    	elif [ -f "$file" ]; then
-      		
-		# Flag file as 1.0
-		populateFileInfo "files_1X" "$file"	
-    	fi
+                # Flag file as 2.X
+                populateFileInfo "files_2X" "$file"
+
+        elif [ -f "$file" ]; then
+
+                # Flag file as 1.0
+                populateFileInfo "files_1X" "$file"
+        fi
 }
 
 # -------- APPLICATION LOGIC --------
@@ -141,16 +167,30 @@ declare -A files_2X
 
 # Define recursive and non-resursive search using find (Recursive if the -r flag is set)
 if $recursive; then
-	# Recursive search	
-	fileList="find . -type f -name '*.js' -print0"
+        # Recursive search
+        fileList="find . -type f -name '*.js' -print0"
+        echo "Initiating process..."
+        totalFiles=$(find . -type f -name '*.js' | wc -l)
 else
-	# Non-recursive search
-	fileList="find . -maxdepth 1 -type f -name '*.js' -print0"
+        # Non-recursive search
+        fileList="find . -maxdepth 1 -type f -name '*.js' -print0"
+        echo "Initiating process..."
+        totalFiles=$(find . -maxdepth 1 -type f -name '*.js' | wc -l)
 fi
+
+# Keep track of progress-bar variables
+currentFile=0
 
 # Iterate through each file found using "find" tool
 while IFS= read -r -d '' file; do
-    	processFile "$file"
+
+        # Process the file
+        processFile "$file"
+        ((currentFile++))
+
+        # Display progress bar
+        displayProgressBar "$currentFile" "$totalFiles"
+
 done < <(eval "$fileList")
 
 # Output Formatting
@@ -183,7 +223,7 @@ if $output_files; then
         output+="$filename: $line_count\n"
     done
 
-    output+="---------------------------"
+    output+="\n---------------------------"
 fi
 
 # Print to stdout
