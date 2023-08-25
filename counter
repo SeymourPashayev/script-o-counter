@@ -107,12 +107,16 @@ processFile() {
 recursive=false
 output_lines=true
 output_files=true
+output_to_file=false
 
 # Process command line options
-while getopts "rh" opt; do
+while getopts "rth" opt; do
 	case $opt in
         	r)
             		recursive=true
+			;;
+		t)
+			output_to_file=true
 			;;
         	h|\?)
             		usage
@@ -151,7 +155,22 @@ done < <(eval "$fileList")
 # Output Formatting
 echo
 echo "----- Code Statistics -----"
-echo
+
+if [ output_lines ]; then
+
+	# Print out the number of lines of both 1.0 and 2.x code.
+	echo "Total #lines 1.0 code: $total_lines_1X"
+	echo "Total #lines 2.x code: $total_lines_2X"
+
+fi
+
+echo "---------------------------"
+
+# Print the number of files in 2.x and 1.0 code array
+        echo "Total #files 1.0 Code: ${#files_1X[@]}"
+        echo "Total #files 2.x Code: ${#files_2X[@]}"
+
+echo "---------------------------"
 
 if [ output_files ]; then
 	
@@ -178,15 +197,5 @@ if [ output_files ]; then
 	echo "---------------------------"
 
 fi
-
-if [ output_lines ]; then
-
-	# Print out the number of lines of both 1.0 and 2.x code.
-	echo "Total #lines 1.0 code: $total_lines_1X"
-	echo "Total #lines 2.x code: $total_lines_2X"
-
-fi
-
-echo "---------------------------"
 
 
